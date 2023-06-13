@@ -113,13 +113,75 @@ public class Model extends Observable {
         // TODO: Modify this.board (and perhaps this.score) to account
         // for the tilt to the Side SIDE. If the board changed, set the
         // changed local variable to true.
+        board.setViewingPerspective(side);
+        for (int c = 0; c < board.size(); c++){
+            if (checkIfAllEmpty(c)){
+                continue;
+            }
+            if (moveEachCol(c)){
+                changed = true;
+            }
+            if (gameOver()){
+                break;
+            }
+        }
 
+        board.setViewingPerspective(Side.NORTH);
         checkGameOver();
         if (changed) {
             setChanged();
         }
         return changed;
     }
+
+    private boolean checkIfAllEmpty(int col){
+        for (int row = board.size()-1; row >=0; row--) {
+            if (board.tile(col, row) != null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean moveEachCol(int col){
+        boolean canMerge = true;
+        boolean changed = false;
+        for (int row = board.size()-1; row >=0; row--) {
+            if (board.tile(col, row) == null){
+                continue;
+            }
+            int furthestMoveRow = findFurthestMoveRow(col, row);
+            Tile t = board.tile(col, row);
+            if (furthestMoveRow > 0
+                && furthestMoveRow < board.size()-1
+                && canMerge == true
+                && board.tile(col, row).value() == board.tile(col,furthestMoveRow+1).value()){
+                board.move(col, furthestMoveRow+1, t);
+                score += board.tile(col, furthestMoveRow+1).value();
+                canMerge = false;
+                changed = true;
+            } else {
+                board.move(col, furthestMoveRow, t);
+                canMerge = true;
+                if (furthestMoveRow != row){
+                    changed = true;
+                }
+            }
+        }
+        return changed;
+    }
+
+    private int findFurthestMoveRow(int col, int row){
+        int furthestMoveRow = board.size()-1;
+        for (int r = board.size()-1; r > row; r--) {
+            if (board.tile(col, r) == null) {
+                break;
+            }
+            furthestMoveRow -= 1;
+        }
+        return furthestMoveRow;
+    }
+
 
     /** Checks if the game is over and sets the gameOver variable
      *  appropriately.
@@ -137,7 +199,14 @@ public class Model extends Observable {
      *  Empty spaces are stored as null.
      * */
     public static boolean emptySpaceExists(Board b) {
-        // TODO: Fill in this function.
+        int size = b.size();
+        for(int c = 0; c < size; c++) {
+            for(int r = 0; r < size; r++){
+                if(b.tile(c, r) == null){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -147,7 +216,14 @@ public class Model extends Observable {
      * given a Tile object t, we get its value with t.value().
      */
     public static boolean maxTileExists(Board b) {
-        // TODO: Fill in this function.
+        int size = b.size();
+        for(int c = 0; c < size; c++) {
+            for(int r = 0; r < size; r++){
+                if(b.tile(c, r) != null && b.tile(c, r).value() == MAX_PIECE){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -158,10 +234,34 @@ public class Model extends Observable {
      * 2. There are two adjacent tiles with the same value.
      */
     public static boolean atLeastOneMoveExists(Board b) {
-        // TODO: Fill in this function.
+        if (emptySpaceExists(b) == true){
+            return true;
+        }
+        for (int c = 0; c < b.size(); c++) {
+            for (int r = 0; r < b.size(); r++){
+                if (adjacentTileWithSameValue(b,c,r)){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
+    private static int[] dc = new int[]{1, -1, 0, 0};
+    private static int[] dr = new int[]{0, 0, 1, -1};
+    public static boolean adjacentTileWithSameValue(Board b, int col, int row) {
+        for (int k=0; k < 4; k++){
+            int nc = col + dc[k];
+            int nr = row + dr[k];
+            if (nc<0 || nc>=b.size() || nr<0 || nr>=b.size() || b.tile(nc,nr)==null) {
+                continue;
+            }
+            if (b.tile(col,row).value() == b.tile(nc,nr).value()){
+                return true;
+            }
+        }
+        return false;
+    }
 
     @Override
      /** Returns the model as a string, used for debugging. */
